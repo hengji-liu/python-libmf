@@ -2,9 +2,16 @@ import numpy as np
 import ctypes
 import os
 import sys
+import fnmatch
 
-compiled_src = os.environ["LIBMF_OBJ"] if "LIBMF_OBJ" in os.environ else sys.argv[1] if len(sys.argv) > 1 else \
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/libmf.so"
+dir_path = os.environ["LIBMF_OBJ"] if "LIBMF_OBJ" in os.environ \
+    else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+for f in os.listdir(dir_path):
+    if os.path.isfile(os.path.join(dir_path, f)) and fnmatch.fnmatch(f, '*libmf*.so'):
+        compiled_src = os.path.join(dir_path, f)
+        break
+
 mf = ctypes.CDLL(compiled_src)
 c_float_p = ctypes.POINTER(ctypes.c_float)
 
@@ -64,6 +71,7 @@ class MFModel(ctypes.Structure):
 class MFParam(ctypes.Structure):
     _fields_ = [(o[0], o[1]) for o in get_default_options()]
 
+
 options_ptr = ctypes.POINTER(MFParam)
 
 
@@ -73,7 +81,7 @@ class MF(object):
         self._options = MFParam()
         for kw in kwargs:
             if kw not in [i[0] for i in get_default_options()]:
-                print "Unrecognized keyword argument '{0}={1}'".format(kw, kwargs[kw])
+                print("Unrecognized keyword argument '{0}={1}'".format(kw, kwargs[kw]))
 
         for item in get_default_options():
             if item[0] not in kwargs:
@@ -182,5 +190,4 @@ def generate_test_data(xs, ys, k, indices_only=False):
     rx = np.random.random_integers(0, xs, k)
     ry = np.random.random_integers(0, ys, k)
     rv = np.random.rand(k)
-    return np.vstack((rx, ry, rv)).transpose() if not indices_only else np.vstack((rx,ry)).transpose()
-
+    return np.vstack((rx, ry, rv)).transpose() if not indices_only else np.vstack((rx, ry)).transpose()

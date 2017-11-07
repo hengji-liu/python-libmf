@@ -21,7 +21,9 @@ setup(name='libmf',
       ext_modules=[Extension('libmf',
                              sources=['src_cpp/libmf_interface.cpp', 'src_cpp/mf.cpp'],
                              depends=['src_cpp/mf.h'],
-                             extra_compile_args=['-std=c++11'])
+                             extra_compile_args=['-DUSEAVX', '-Wall', '-O3', '-pthread',
+                                                 '-std=c++0x', '-march=native', '-mavx',
+                                                 '-DUSEOMP', '-fopenmp'])
                    ],
       keywords=["matrix factorization", "machine learning", "parallelism", "python", "out of core"],
       )
