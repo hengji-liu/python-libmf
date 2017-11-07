@@ -1,8 +1,8 @@
 import numpy as np
 import ctypes
 import os
-import sys
 import fnmatch
+from collections import namedtuple
 
 dir_path = os.environ["LIBMF_OBJ"] if "LIBMF_OBJ" in os.environ \
     else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -36,26 +36,25 @@ COL_MPR = 11
 ROW_AUC = 12
 COL_AUC = 13
 
+Option = namedtuple('Option', ['name', 'type', 'value'])
+
+default_options = [
+    Option(name="fun", type=ctypes.c_int, value=P_L2_MFR),
+    Option(name="k", type=ctypes.c_int, value=8),
+    Option(name="nr_threads", type=ctypes.c_int, value=12),
+    Option(name="nr_bins", type=ctypes.c_int, value=20),
+    Option(name="nr_iters", type=ctypes.c_int, value=20),
+    Option(name="lambda_p1", type=ctypes.c_float, value=0.0),
+    Option(name="lambda_p2", type=ctypes.c_float, value=0.1),
+    Option(name="lambda_q1", type=ctypes.c_float, value=0.0),
+    Option(name="lambda_q2", type=ctypes.c_float, value=0.1),
+    Option(name="eta", type=ctypes.c_float, value=0.1),
+    Option(name="do_nmf", type=ctypes.c_bool, value=False),
+    Option(name="quiet", type=ctypes.c_bool, value=False),
+    Option(name="copy_data", type=ctypes.c_bool, value=False),
+]
+
 ''' libmf enums '''
-
-
-def get_default_options():
-    options = [
-        ("fun", ctypes.c_int, P_L2_MFR),
-        ("k", ctypes.c_int, 8),
-        ("nr_threads", ctypes.c_int, 12),
-        ("nr_bins", ctypes.c_int, 26),
-        ("nr_iters", ctypes.c_int, 20),
-        ("lambda_p1", ctypes.c_float, 0.0),
-        ("lambda_p2", ctypes.c_float, 0.0),
-        ("lambda_q1", ctypes.c_float, 0.1),
-        ("lambda_q2", ctypes.c_float, 0.1),
-        ("eta", ctypes.c_float, 0.1),
-        ("do_nmf", ctypes.c_bool, False),
-        ("quiet", ctypes.c_bool, False),
-        ("copy_data", ctypes.c_bool, True)
-    ]
-    return options
 
 
 class MFModel(ctypes.Structure):
@@ -69,7 +68,7 @@ class MFModel(ctypes.Structure):
 
 
 class MFParam(ctypes.Structure):
-    _fields_ = [(o[0], o[1]) for o in get_default_options()]
+    _fields_ = [(opt.name, opt.type) for opt in default_options]
 
 
 options_ptr = ctypes.POINTER(MFParam)
@@ -80,41 +79,12 @@ class MF(object):
         self.model = None
         self._options = MFParam()
         for kw in kwargs:
-            if kw not in [i[0] for i in get_default_options()]:
+            if kw not in [opt.name for opt in default_options]:
                 print("Unrecognized keyword argument '{0}={1}'".format(kw, kwargs[kw]))
 
-        for item in get_default_options():
-            if item[0] not in kwargs:
-                value = item[2]
-            else:
-                value = kwargs[item[0]]
-
-            if item[0] is "fun":
-                self._options.fun = ctypes.c_int(value)
-            elif item[0] is "k":
-                self._options.k = ctypes.c_int(value)
-            elif item[0] is "nr_threads":
-                self._options.nr_threads = ctypes.c_int(value)
-            elif item[0] is "nr_bins":
-                self._options.nr_bins = ctypes.c_int(value)
-            elif item[0] is "nr_iters":
-                self._options.nr_iters = ctypes.c_int(value)
-            elif item[0] is "lambda_p1":
-                self._options.lambda_p1 = ctypes.c_float(value)
-            elif item[0] is "lambda_p2":
-                self._options.lambda_p2 = ctypes.c_float(value)
-            elif item[0] is "lambda_q1":
-                self._options.lambda_q1 = ctypes.c_float(value)
-            elif item[0] is "lambda_q2":
-                self._options.lambda_q2 = ctypes.c_float(value)
-            elif item[0] is "eta":
-                self._options.eta = ctypes.c_float(value)
-            elif item[0] is "do_nmf":
-                self._options.do_nmf = ctypes.c_bool(value)
-            elif item[0] is "quiet":
-                self._options.quiet = ctypes.c_bool(value)
-            elif item[0] is "copy_data":
-                self._options.copy_data = ctypes.c_bool(value)
+        for opt in default_options:
+            value = kwargs[opt.name] if opt.name in kwargs else opt.value
+            setattr(self._options, opt.name, opt.type(value))
 
     def mf_predict(self, X):
         """
